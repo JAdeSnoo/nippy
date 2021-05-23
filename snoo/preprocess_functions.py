@@ -18,6 +18,7 @@ import os
 #%% Functions
 
 ##SMOOTHING & DERIVATIVES
+
 def savgol(spectra, filter_win=9, poly_order=3, deriv_order=0, delta=1.0):
     """ Perform Savitzky–Golay filtering on the data (also calculates derivatives). This function is a wrapper for
     scipy.signal.savgol_filter.
@@ -54,6 +55,7 @@ def derivate(spectra, order=1, delta=1):
 
 
 ##SCATTER CORRECTIONS
+
 def baseline(spectra):
     """ Removes baseline (mean) from each spectrum.
 
@@ -142,8 +144,6 @@ def lsnv(spectra, num_windows=6):
 
 
 ##SCALING
-
-
 
 def detrend(spectra, bp=0):
     """ Perform spectral detrending to remove linear trend from data.
