@@ -135,7 +135,8 @@ def parse_lsnv(config):
 
 
 def parse_detrend(config):
-    config['bp'] = _parse_list_of_lists(config['bp'], dtype=int)
+    if 'bp' in config.keys():
+        config['bp'] = _parse_list_of_lists(config['bp'], dtype=int)
 
     return config
 
@@ -253,6 +254,8 @@ def parse_section(config, config_type):
 
     if config_type == 'SAVGOL':
         config = parse_savgol(config)
+    elif config_type == 'DERIVATE':
+        config = parse_derivate(config)
     elif config_type == 'BASELINE':
         config = {}
     elif config_type == 'SNV':
@@ -383,7 +386,7 @@ def read_configuration(file_path):
 
     # Parse predefined configuration sections
     config = {}
-    for part in ['SAVGOL', 'TRIM', 'BASELINE', 'SNV', 'RNV', 'LSNV', 'DETREND', 'MSC', 'EMSC', 'NORML', 'CLIP', 'SMOOTH', 'RESAMPLE']:
+    for part in ['TRIM', 'SAVGOL', 'DERIVATE', 'BASELINE', 'SNV', 'RNV', 'LSNV', 'DETREND', 'MSC', 'EMSC', 'NORML', 'CLIP', 'SMOOTH', 'RESAMPLE']:
         if part in parser:
             config[part] = parse_section(dict(parser[part]), part)
 
