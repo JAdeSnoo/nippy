@@ -24,7 +24,7 @@ import numpy as np
 def savgol(X):
     #EXTRA FUNCTION REDUNDANT
     
-    def savgol(spectra, filter_win=9, poly_order=3, deriv_order=0, delta=1.0):
+    def savgol(spectra, filter_win=11, poly_order=2, deriv_order=0, delta=1.0):
         """ Perform Savitzky–Golay filtering on the data (also calculates derivatives). This function is a wrapper for
         scipy.signal.savgol_filter.
         
@@ -36,8 +36,26 @@ def savgol(X):
         Returns:
             spectra <numpy.ndarray>: NIRS data smoothed with Savitzky-Golay filtering
         """
-        return scipy.signal.savgol_filter(spectra, filter_win, poly_order, deriv_order, delta=delta, axis=0)
+        return scipy.signal.savgol_filter(spectra, filter_win, poly_order, deriv_order, delta=delta, axis=1)
     return savgol
+
+def savgol_der(X):
+    #EXTRA FUNCTION REDUNDANT
+    
+    def savgol_der(spectra, filter_win=11, poly_order=2, deriv_order=0, delta=1.0):
+        """ Perform Savitzky–Golay filtering on the data (also calculates derivatives). This function is a wrapper for
+        scipy.signal.savgol_filter.
+        
+        Args:
+            spectra <numpy.ndarray>: NIRS data matrix.
+            filter_win <int>: Size of the filter window in samples (default 11).
+            poly_order <int>: Order of the polynomial estimation (default 3).
+            deriv_order <int>: Order of the derivation (default 0).
+        Returns:
+            spectra <numpy.ndarray>: NIRS data smoothed with Savitzky-Golay filtering
+        """
+        return scipy.signal.savgol_filter(spectra, filter_win, poly_order, deriv_order, delta=delta, axis=1)
+    return savgol_der
 
 
 def derivate(X):
@@ -59,11 +77,12 @@ def derivate(X):
     return derivatives
 
 
-#%% SCATTER CORRECTIONS
+
+#%% BASELINE
 
 def baseline(spectra):
+    #EXTRA FUNCTION REDUNDANT
 
-    mean_cols = np.mean(spectra, axis=0)
     def baseline(spectra):
         """ Removes baseline (mean) from each spectrum.
 
@@ -73,9 +92,10 @@ def baseline(spectra):
         Returns:
             spectra <numpy.ndarray>: Mean-centered NIRS data matrix
         """
-        return spectra - mean_cols
+        return spectra - np.mean(spectra, axis=1)[:, None]
     
     return baseline
+
 
 def detrend(X):
     #EXTRA FUNCTION REDUNDANT
@@ -90,9 +110,14 @@ def detrend(X):
         Returns:
             spectra <numpy.ndarray>: Detrended NIR spectra
         """
-        return scipy.signal.detrend(spectra, bp=bp)
+        return scipy.signal.detrend(spectra, bp=bp, axis= 1)
     
     return detrend
+
+
+
+#%% SCATTER CORRECTIONS
+
 
 
 def norml(X):
@@ -106,26 +131,9 @@ def norml(X):
         Returns:
             processed_spectra <numpy.ndarray>: Normalized NIR spectra.
         """
-        return spectra / np.linalg.norm(spectra, axis=0)
+        return spectra / np.linalg.norm(spectra, axis=1)[:, None]
     
     return norml
-
-
-
-def norm_unit(spectra):
-    
-    f = (np.max(spectra) - np.min(spectra))    #Min-max-range
-    def norm_unit(spectra):
-        ''' Normalize absorbance units to fall between 0 and 1 
-        
-        Args:
-            spectra <numpy.ndarray>: NIRS data matrix.
-        Returns:
-            spectra <numpy.ndarray>: Normalized NIR spectra.
-        '''
-        return spectra / f
-    
-    return norm_unit
 
 
 
@@ -141,7 +149,7 @@ def snv(X):
             spectra <numpy.ndarray>: NIRS data with (S/R)NV applied.
         """
 
-        return (spectra - np.shape(np.mean(spectra, axis=0))) / np.std(spectra, axis=0)
+        return (spectra - np.mean(spectra, axis=1)) / np.std(spectra, axis=1)
     
     return snv
 
@@ -160,7 +168,7 @@ def rnv(X):
             spectra <numpy.ndarray>: NIRS data with (S/R)NV applied.
         """
 
-        return (spectra - np.median(spectra, axis=0)) / np.subtract(*np.percentile(spectra, iqr, axis=0))
+        return (spectra - np.median(spectra, axis=1)) / np.subtract(*np.percentile(spectra, iqr, axis=1))
     
     return rnv
 
@@ -169,7 +177,6 @@ def lsnv(X):
     #EXTRA FUNCTION REDUNDANT
     
     def lsnv(spectra, num_windows=6):
-    
         """ Perform local scatter correction using the standard normal variate.
 
         Args:
@@ -179,11 +186,11 @@ def lsnv(X):
             spectra <numpy.ndarray>: NIRS data with local SNV applied.
             """
 
-        parts = np.array_split(spectra, num_windows, axis=0)
+        parts = np.array_split(spectra, num_windows, axis=1)
         for idx, part in enumerate(parts):
             parts[idx] = snv(part)
 
-        return np.concatenate(parts, axis=0)
+        return np.concatenate(parts, axis=1)
 
     return lsnv()
 
@@ -191,9 +198,7 @@ def lsnv(X):
 
 
 
-#%% SCALING
-
-
+#%% SCALING & EXTRA
 
 def pareto(spectra):
     
@@ -208,3 +213,19 @@ def pareto(spectra):
         return spectra / sqrt_std[None, :]
     
     return pareto
+
+
+def norm_unit(spectra):
+    
+    f = (np.max(spectra) - np.min(spectra))    #Min-max-range
+    def norm_unit(spectra):
+        ''' Normalize absorbance units to fall between 0 and 1 
+        
+        Args:
+            spectra <numpy.ndarray>: NIRS data matrix.
+        Returns:
+            spectra <numpy.ndarray>: Normalized NIR spectra.
+        '''
+        return spectra / f
+    
+    return norm_unit

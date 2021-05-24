@@ -9,31 +9,39 @@ Created on Sat May 22 15:17:21 2021
 import scipy.signal
 import scipy.ndimage as nd
 import numpy as np
-from sklearn.preprocessing import normalize, scale, MinMaxScaler
-
-import pickle
-import os
+from sklearn.preprocessing import normalize, scale
 
 
-#%% Functions
 
-##SMOOTHING & DERIVATIVES
+#%% SMOOTHING & DERIVATIVES
 
-def savgol(spectra, filter_win=9, poly_order=3, deriv_order=0, delta=1.0):
-    """ Perform Savitzky–Golay filtering on the data (also calculates derivatives). This function is a wrapper for
-    scipy.signal.savgol_filter.
+def savgol(spectra, filter_win=11, poly_order=2, deriv_order=0, delta=1.0):
+        """ Perform Savitzky–Golay filtering on the data (also calculates derivatives). This function is a wrapper for
+        scipy.signal.savgol_filter.
+        
+        Args:
+            spectra <numpy.ndarray>: NIRS data matrix.
+            filter_win <int>: Size of the filter window in samples (default 11).
+            poly_order <int>: Order of the polynomial estimation (default 3).
+            deriv_order <int>: Order of the derivation (default 0).
+        Returns:
+            spectra <numpy.ndarray>: NIRS data smoothed with Savitzky-Golay filtering
+        """
+        return scipy.signal.savgol_filter(spectra, filter_win, poly_order, deriv_order, delta=delta, axis=1)
 
-    Args:
-        spectra <numpy.ndarray>: NIRS data matrix.
-        filter_win <int>: Size of the filter window in samples (default 11).
-        poly_order <int>: Order of the polynomial estimation (default 3).
-        deriv_order <int>: Order of the derivation (default 0).
-
-    Returns:
-        spectra <numpy.ndarray>: NIRS data smoothed with Savitzky-Golay filtering
-    """
-    return scipy.signal.savgol_filter(spectra, filter_win, poly_order, deriv_order, delta=delta, axis=0)
-
+def savgol_der(spectra, filter_win=11, poly_order=2, deriv_order=0, delta=1.0):
+        """ Perform Savitzky–Golay filtering on the data (also calculates derivatives). This function is a wrapper for
+        scipy.signal.savgol_filter.
+        
+        Args:
+            spectra <numpy.ndarray>: NIRS data matrix.
+            filter_win <int>: Size of the filter window in samples (default 11).
+            poly_order <int>: Order of the polynomial estimation (default 3).
+            deriv_order <int>: Order of the derivation (default 0).
+        Returns:
+            spectra <numpy.ndarray>: NIRS data smoothed with Savitzky-Golay filtering
+        """
+        return scipy.signal.savgol_filter(spectra, filter_win, poly_order, deriv_order, delta=delta, axis=1)
 
 
 def derivate(spectra, order=1, delta=1):
@@ -51,10 +59,7 @@ def derivate(spectra, order=1, delta=1):
     return spectra
 
 
-
-
-
-##SCATTER CORRECTIONS
+#%% BASELINE
 
 def baseline(spectra):
     """ Removes baseline (mean) from each spectrum.
@@ -66,8 +71,25 @@ def baseline(spectra):
         spectra <numpy.ndarray>: Mean-centered NIRS data matrix
     """
     
-    return spectra - np.mean(spectra, axis=0)
+    return spectra - np.mean(spectra, axis=1)[:, None]
 
+
+def detrend(spectra, bp=0):
+    """ Perform spectral detrending to remove linear trend from data.
+
+    Args:
+        spectra <numpy.ndarray>: NIRS data matrix.
+        bp <list>: A sequence of break points. If given, an individual linear fit is performed for each part of data
+        between two break points. Break points are specified as indices into data.
+
+    Returns:
+        spectra <numpy.ndarray>: Detrended NIR spectra
+    """
+    
+    return scipy.signal.detrend(spectra, bp=bp, axis= 1)
+
+
+#%% SCATTER CORRECTIONS
 
 def norml(spectra):
     """ Perform spectral normalisation based on vector norm.
@@ -82,15 +104,7 @@ def norml(spectra):
         spectra <numpy.ndarray>: Normalized NIR spectra
     """
     
-    return spectra / np.linalg.norm(spectra, axis=0)
-
-
-
-def norm_unit(spectra):
-    ''' Normalize absorbance units to fallb between 0 and 1 '''
-    f = (np.max(spectra) - np.min(spectra))    #Min-max-range
-    
-    return spectra / f
+    return spectra / np.linalg.norm(spectra, axis=1)[:, None]
 
 
 
@@ -104,8 +118,8 @@ def snv(spectra):
         spectra <numpy.ndarray>: NIRS data with (S/R)NV applied.
     """
 
-    return (spectra - np.mean(spectra, axis=0)) / np.std(spectra, axis=0)   #5.7 ms ± 122 µs per loop
-    #return scale(spectra, axis=0, with_mean= True, with_std= True)         #11.8 ms ± 211 µs per loop
+    return (spectra - np.shape(np.mean(spectra, axis=1))) / np.std(spectra, axis=1)   #5.7 ms ± 122 µs per loop
+    #return scale(spectra, axis=0, with_mean= True, with_std= True)                   #11.8 ms ± 211 µs per loop
 
 
 
@@ -120,7 +134,7 @@ def rnv(spectra, iqr=[75, 25]):
         spectra <numpy.ndarray>: NIRS data with (S/R)NV applied.
     """
 
-    return (spectra - np.median(spectra, axis=0)) / np.subtract(*np.percentile(spectra, iqr, axis=0))
+    return (spectra - np.median(spectra, axis=1)) / np.subtract(*np.percentile(spectra, iqr, axis=1))
 
 
 def lsnv(spectra, num_windows=6):
@@ -134,30 +148,16 @@ def lsnv(spectra, num_windows=6):
         spectra <numpy.ndarray>: NIRS data with local SNV applied.
     """
 
-    parts = np.array_split(spectra, num_windows, axis=0)
+    parts = np.array_split(spectra, num_windows, axis=1)
     for idx, part in enumerate(parts):
         parts[idx] = snv(part)
 
-    return np.concatenate(parts, axis=0)
+    return np.concatenate(parts, axis=1)
 
 
 
 
-##SCALING
-
-def detrend(spectra, bp=0):
-    """ Perform spectral detrending to remove linear trend from data.
-
-    Args:
-        spectra <numpy.ndarray>: NIRS data matrix.
-        bp <list>: A sequence of break points. If given, an individual linear fit is performed for each part of data
-        between two break points. Break points are specified as indices into data.
-
-    Returns:
-        spectra <numpy.ndarray>: Detrended NIR spectra
-    """
-    return scipy.signal.detrend(spectra, bp=bp)
-
+#%% SCALING & EXTRA
 
 
 def pareto(spectra):
@@ -167,12 +167,47 @@ def pareto(spectra):
     return spectra / sqrt_std[None, :]
 
 
+def norm_unit(spectra):
+    ''' Normalize absorbance units to fall between 0 and 1 '''
+    f = (np.max(spectra) - np.min(spectra))    #Min-max-range
+    
+    return spectra / f
 
 
 
 
 
-#%% Unused functions
+
+
+
+
+
+
+
+
+
+
+#%% Unused functions (STILL COLUMN BASED)
+
+
+def savgol_OLD(X):
+    #EXTRA FUNCTION REDUNDANT
+    
+    def savgol(spectra, filter_win=11, poly_order=2, deriv_order=0, delta=1.0):
+        """ Perform Savitzky–Golay filtering on the data (also calculates derivatives). This function is a wrapper for
+        scipy.signal.savgol_filter.
+        
+        Args:
+            spectra <numpy.ndarray>: NIRS data matrix.
+            filter_win <int>: Size of the filter window in samples (default 11).
+            poly_order <int>: Order of the polynomial estimation (default 3).
+            deriv_order <int>: Order of the derivation (default 0).
+        Returns:
+            spectra <numpy.ndarray>: NIRS data smoothed with Savitzky-Golay filtering
+        """
+        return scipy.signal.savgol_filter(spectra, filter_win, poly_order, deriv_order, delta=delta, axis=0)
+    return savgol
+
 
 def robust_baseline(spectra):
     """ Removes baseline (if robust: median, else: mean) from each spectrum.
