@@ -59,52 +59,12 @@ def derivate(spectra, order=1, delta=1):
     return spectra
 
 
-#%% BASELINE
 
-def baseline(spectra):
-    """ Removes baseline (mean) from each spectrum.
-
-    Args:
-        spectra <numpy.ndarray>: NIRS data matrix.
-
-    Returns:
-        spectra <numpy.ndarray>: Mean-centered NIRS data matrix
-    """
-    
-    return spectra - np.mean(spectra, axis=1)[:, None]
-
-
-def detrend(spectra, bp=0):
-    """ Perform spectral detrending to remove linear trend from data.
-
-    Args:
-        spectra <numpy.ndarray>: NIRS data matrix.
-        bp <list>: A sequence of break points. If given, an individual linear fit is performed for each part of data
-        between two break points. Break points are specified as indices into data.
-
-    Returns:
-        spectra <numpy.ndarray>: Detrended NIR spectra
-    """
-    
-    return scipy.signal.detrend(spectra, bp=bp, axis= 1)
 
 
 #%% SCATTER CORRECTIONS
 
-def norml(spectra):
-    """ Perform spectral normalisation based on vector norm.
 
-    Args:
-        spectra <numpy.ndarray>: NIRS data matrix.
-        udefined <bool>: use user defined limits
-        imin <float>: user defined minimum
-        imax <float>: user defined maximum
-
-    Returns:
-        spectra <numpy.ndarray>: Normalized NIR spectra
-    """
-    
-    return spectra / np.linalg.norm(spectra, axis=1)[:, None]
 
 
 
@@ -118,8 +78,8 @@ def snv(spectra):
         spectra <numpy.ndarray>: NIRS data with (S/R)NV applied.
     """
 
-    return (spectra - np.shape(np.mean(spectra, axis=1))) / np.std(spectra, axis=1)   #5.7 ms ± 122 µs per loop
-    #return scale(spectra, axis=0, with_mean= True, with_std= True)                   #11.8 ms ± 211 µs per loop
+    return (spectra - np.mean(spectra, axis=1)[:, None]) / np.std(spectra, axis=1)[:, None]   #5.7 ms ± 122 µs per loop
+    #return scale(spectra, axis=0, with_mean= True, with_std= True)         #11.8 ms ± 211 µs per loop
 
 
 
@@ -134,7 +94,7 @@ def rnv(spectra, iqr=[75, 25]):
         spectra <numpy.ndarray>: NIRS data with (S/R)NV applied.
     """
 
-    return (spectra - np.median(spectra, axis=1)) / np.subtract(*np.percentile(spectra, iqr, axis=1))
+    return (spectra - np.median(spectra, axis=1)[:, None]) / np.subtract(*np.percentile(spectra, iqr, axis=1)[:, None])
 
 
 def lsnv(spectra, num_windows=6):
@@ -155,9 +115,54 @@ def lsnv(spectra, num_windows=6):
     return np.concatenate(parts, axis=1)
 
 
+    #%% Spectra norml
 
 
-#%% SCALING & EXTRA
+def area_norm(spectra):
+    """ Perform spectral normalisation based on the summation aver all wavelengths.
+
+    Args:
+        spectra <numpy.ndarray>: NIRS data matrix.
+    Returns:
+        spectra <numpy.ndarray>: Normalized NIR spectra
+    """
+    
+    return spectra / np.sum(spectra, axis=1)[:, None]
+
+
+
+def norml(spectra):
+    """ Perform spectral normalisation based on vector norm.
+
+    Args:
+        spectra <numpy.ndarray>: NIRS data matrix.
+    Returns:
+        spectra <numpy.ndarray>: Normalized NIR spectra
+    """
+    
+    return spectra / np.linalg.norm(spectra, axis=1)[:, None]
+
+
+def vec_norm(spectra):
+    ''' Perform vector normalization: equivalent to SNV --> std = norml '''
+    
+    return (spectra - np.mean(spectra, axis=1)[:, None]) / np.linalg.norm(spectra, axis=1)[:, None]
+
+
+
+#%% SCALING & NORMALIZATION
+
+
+def mean_center(spectra):
+    ''' Mean centers the columns of the spectra '''
+    
+    return spectra - np.mean(spectra, axis= 0)[None, :]
+
+
+def auto_scale(spectra):
+    ''' Performs auto scaling on spectra '''
+    
+    return (spectra - np.mean(spectra, axis= 0)[None, :]) / np.std(spectra, axis= 0)[None, :]
 
 
 def pareto(spectra):
@@ -165,6 +170,9 @@ def pareto(spectra):
     sqrt_std = np.sqrt(np.std(spectra, axis=0))
     
     return spectra / sqrt_std[None, :]
+
+
+
 
 
 def norm_unit(spectra):
@@ -391,3 +399,33 @@ def clip(wavelength, spectra, threshold, substitute=None):
     return wavelength, spectra
 
     return wavelength, spectra
+
+
+#%% BASELINE
+
+def baseline(spectra):
+    """ Removes baseline (mean) from each spectrum.
+
+    Args:
+        spectra <numpy.ndarray>: NIRS data matrix.
+
+    Returns:
+        spectra <numpy.ndarray>: Mean-centered NIRS data matrix
+    """
+    
+    return spectra - np.mean(spectra, axis=1)[:, None]
+
+
+def detrend(spectra, bp=0):
+    """ Perform spectral detrending to remove linear trend from data.
+
+    Args:
+        spectra <numpy.ndarray>: NIRS data matrix.
+        bp <list>: A sequence of break points. If given, an individual linear fit is performed for each part of data
+        between two break points. Break points are specified as indices into data.
+
+    Returns:
+        spectra <numpy.ndarray>: Detrended NIR spectra
+    """
+    
+    return scipy.signal.detrend(spectra, bp=bp, axis= 1)

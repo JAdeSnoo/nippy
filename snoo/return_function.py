@@ -78,7 +78,163 @@ def derivate(X):
 
 
 
+#%% SCATTER CORRECTIONS
+
+
+def snv(X):
+    #EXTRA FUNCTION REDUNDANT
+    
+    def snv(spectra):
+        """ Perform scatter correction using the standard normal variate.
+
+        Args:
+            spectra <numpy.ndarray>: NIRS data matrix.
+        Returns:
+            spectra <numpy.ndarray>: NIRS data with (S/R)NV applied.
+        """
+
+        return (spectra - np.mean(spectra, axis=1)[:, None]) / np.std(spectra, axis=1)[:, None]
+    
+    return snv
+
+
+
+def rnv(X):
+    #EXTRA FUNCTION REDUNDANT
+    
+    def rnv(spectra, iqr=[75, 25]):
+        """ Perform scatter correction using robust normal variate.
+
+        Args:
+            spectra <numpy.ndarray>: NIRS data matrix.
+            iqr <list>: IQR ranges [lower, upper] for robust normal variate.
+        Returns:
+            spectra <numpy.ndarray>: NIRS data with (S/R)NV applied.
+        """
+
+        return (spectra - np.median(spectra, axis=1)[:, None]) / np.subtract(*np.percentile(spectra, iqr, axis=1)[:, None])
+    
+    return rnv
+
+
+def lsnv(X):
+    #EXTRA FUNCTION REDUNDANT
+    
+    def lsnv(spectra, num_windows=6):
+        """ Perform local scatter correction using the standard normal variate.
+
+        Args:
+            spectra <numpy.ndarray>: NIRS data matrix.
+            num_windows <int>: number of equispaced windows to use (window size (in points) is length / num_windows)
+        Returns:
+            spectra <numpy.ndarray>: NIRS data with local SNV applied.
+            """
+
+        parts = np.array_split(spectra, num_windows, axis=1)
+        for idx, part in enumerate(parts):
+            parts[idx] = snv(part)
+
+        return np.concatenate(parts, axis=1)
+
+    return lsnv()
+
+
+    #%% Spectra norml
+
+def area_norm(X):
+    #EXTRA FUNCTION REDUNDANT
+    
+    def area_norm(spectra):
+        """ Perform spectral normalisation based on the summation aver all wavelengths.
+        
+        Args:
+            spectra <numpy.ndarray>: NIRS data matrix.
+        Returns:
+            spectra <numpy.ndarray>: Normalized NIR spectra
+        """
+        
+        return spectra / np.sum(spectra, axis=1)[:, None]
+
+    return area_norm
+
+
+def norml(X):
+    #EXTRA FUNCTION REDUNDANT
+    
+    def norml(spectra):
+        """ Perform spectral normalisation based on vector norm.
+
+        Args:
+            spectra <numpy.ndarray>: NIRS data matrix.
+        Returns:
+            processed_spectra <numpy.ndarray>: Normalized NIR spectra.
+        """
+        return spectra / np.linalg.norm(spectra, axis=1)[:, None]
+    
+    return norml
+
+
+def vec_norm(spectra):
+    #EXTRA FUNCTION REDUNDANT
+    
+    def vec_norm(spectra):
+        ''' Perform vector normalization: equivalent to SNV --> std = norml '''
+    
+        return (spectra - np.mean(spectra, axis=1)[:, None]) / np.linalg.norm(spectra, axis=1)[:, None]
+    
+    return vec_norm
+
+
+
+#%% SCALING & NORML
+
+
+
+def mean_center(spectra):
+    
+    mean = np.mean(spectra, axis= 0)
+    def mean_center(spectra):
+        ''' Mean centers the columns of the spectra '''
+        
+        return spectra - mean[None, :]
+    
+    return mean_center
+
+
+def pareto(spectra):
+    
+    sqrt_std = np.sqrt(np.std(spectra, axis=0))
+    def pareto(spectra):
+        ''' Perform Pareto scaling to decrease the the importance of high variance variables 
+        
+        Args:
+            spectra <numpy.ndarray>: NIRS data matrix.
+        Returns:
+            spectra <numpy.ndarray>: Scaled NIR spectra'''
+        return spectra / sqrt_std[None, :]
+    
+    return pareto
+
+
+def norm_unit(spectra):
+    
+    f = (np.max(spectra) - np.min(spectra))    #Min-max-range
+    def norm_unit(spectra):
+        ''' Normalize absorbance units to fall between 0 and 1 
+        
+        Args:
+            spectra <numpy.ndarray>: NIRS data matrix.
+        Returns:
+            spectra <numpy.ndarray>: Normalized NIR spectra.
+        '''
+        return spectra / f
+    
+    return norm_unit
+
+
+
 #%% BASELINE
+
 
 def baseline(spectra):
     #EXTRA FUNCTION REDUNDANT
@@ -113,119 +269,3 @@ def detrend(X):
         return scipy.signal.detrend(spectra, bp=bp, axis= 1)
     
     return detrend
-
-
-
-#%% SCATTER CORRECTIONS
-
-
-
-def norml(X):
-    #EXTRA FUNCTION REDUNDANT
-    
-    def norml(spectra):
-        """ Perform spectral normalisation based on vector norm.
-
-        Args:
-            spectra <numpy.ndarray>: NIRS data matrix.
-        Returns:
-            processed_spectra <numpy.ndarray>: Normalized NIR spectra.
-        """
-        return spectra / np.linalg.norm(spectra, axis=1)[:, None]
-    
-    return norml
-
-
-
-def snv(X):
-    #EXTRA FUNCTION REDUNDANT
-    
-    def snv(spectra):
-        """ Perform scatter correction using the standard normal variate.
-
-        Args:
-            spectra <numpy.ndarray>: NIRS data matrix.
-        Returns:
-            spectra <numpy.ndarray>: NIRS data with (S/R)NV applied.
-        """
-
-        return (spectra - np.mean(spectra, axis=1)) / np.std(spectra, axis=1)
-    
-    return snv
-
-
-
-def rnv(X):
-    #EXTRA FUNCTION REDUNDANT
-    
-    def rnv(spectra, iqr=[75, 25]):
-        """ Perform scatter correction using robust normal variate.
-
-        Args:
-            spectra <numpy.ndarray>: NIRS data matrix.
-            iqr <list>: IQR ranges [lower, upper] for robust normal variate.
-        Returns:
-            spectra <numpy.ndarray>: NIRS data with (S/R)NV applied.
-        """
-
-        return (spectra - np.median(spectra, axis=1)) / np.subtract(*np.percentile(spectra, iqr, axis=1))
-    
-    return rnv
-
-
-def lsnv(X):
-    #EXTRA FUNCTION REDUNDANT
-    
-    def lsnv(spectra, num_windows=6):
-        """ Perform local scatter correction using the standard normal variate.
-
-        Args:
-            spectra <numpy.ndarray>: NIRS data matrix.
-            num_windows <int>: number of equispaced windows to use (window size (in points) is length / num_windows)
-        Returns:
-            spectra <numpy.ndarray>: NIRS data with local SNV applied.
-            """
-
-        parts = np.array_split(spectra, num_windows, axis=1)
-        for idx, part in enumerate(parts):
-            parts[idx] = snv(part)
-
-        return np.concatenate(parts, axis=1)
-
-    return lsnv()
-
-
-
-
-
-#%% SCALING & EXTRA
-
-def pareto(spectra):
-    
-    sqrt_std = np.sqrt(np.std(spectra, axis=0))
-    def pareto(spectra):
-        ''' Perform Pareto scaling to decrease the the importance of high variance variables 
-        
-        Args:
-            spectra <numpy.ndarray>: NIRS data matrix.
-        Returns:
-            spectra <numpy.ndarray>: Scaled NIR spectra'''
-        return spectra / sqrt_std[None, :]
-    
-    return pareto
-
-
-def norm_unit(spectra):
-    
-    f = (np.max(spectra) - np.min(spectra))    #Min-max-range
-    def norm_unit(spectra):
-        ''' Normalize absorbance units to fall between 0 and 1 
-        
-        Args:
-            spectra <numpy.ndarray>: NIRS data matrix.
-        Returns:
-            spectra <numpy.ndarray>: Normalized NIR spectra.
-        '''
-        return spectra / f
-    
-    return norm_unit
