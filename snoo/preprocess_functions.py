@@ -27,7 +27,7 @@ def savgol(spectra, filter_win=11, poly_order=2, deriv_order=0, delta=1.0):
         Returns:
             spectra <numpy.ndarray>: NIRS data smoothed with Savitzky-Golay filtering
         """
-        return scipy.signal.savgol_filter(spectra, filter_win, poly_order, deriv_order, delta=delta, axis=1)
+        return scipy.signal.savgol_filter(spectra, window_length= filter_win, polyorder= poly_order, deriv= deriv_order, delta=delta, axis=1)
 
 def savgol_der(spectra, filter_win=11, poly_order=2, deriv_order=0, delta=1.0):
         """ Perform Savitzky–Golay filtering on the data (also calculates derivatives). This function is a wrapper for
@@ -41,7 +41,7 @@ def savgol_der(spectra, filter_win=11, poly_order=2, deriv_order=0, delta=1.0):
         Returns:
             spectra <numpy.ndarray>: NIRS data smoothed with Savitzky-Golay filtering
         """
-        return scipy.signal.savgol_filter(spectra, filter_win, poly_order, deriv_order, delta=delta, axis=1)
+        return scipy.signal.savgol_filter(spectra, window_length= filter_win, polyorder= poly_order, deriv= deriv_order, delta=delta, axis=1)
 
 
 def derivate(spectra, order=1, delta=1):
@@ -150,46 +150,43 @@ def vec_norm(spectra):
 
 
 
+
+
+
+#%% BASELINE
+
+def baseline(spectra):
+    """ Removes baseline (mean) from each spectrum.
+
+    Args:
+        spectra <numpy.ndarray>: NIRS data matrix.
+
+    Returns:
+        spectra <numpy.ndarray>: Mean-centered NIRS data matrix
+    """
+    
+    return spectra - np.mean(spectra, axis=1)[:, None]
+
+
+def detrend(spectra, bp=0):
+    """ Perform spectral detrending to remove linear trend from data.
+
+    Args:
+        spectra <numpy.ndarray>: NIRS data matrix.
+        bp <list>: A sequence of break points. If given, an individual linear fit is performed for each part of data
+        between two break points. Break points are specified as indices into data.
+
+    Returns:
+        spectra <numpy.ndarray>: Detrended NIR spectra
+    """
+    
+    return scipy.signal.detrend(spectra, bp=bp, axis= 1)
+
+
+
 #%% SCALING & NORMALIZATION
 
-
-def mean_center(spectra):
-    ''' Mean centers the columns of the spectra '''
-    
-    return spectra - np.mean(spectra, axis= 0)[None, :]
-
-
-def auto_scale(spectra):
-    ''' Performs auto scaling on spectra '''
-    
-    return (spectra - np.mean(spectra, axis= 0)[None, :]) / np.std(spectra, axis= 0)[None, :]
-
-
-def pareto(spectra):
-    ''' Perform Pareto scaling to decrease the the importance of high variance variables '''
-    sqrt_std = np.sqrt(np.std(spectra, axis=0))
-    
-    return spectra / sqrt_std[None, :]
-
-
-
-
-
-def norm_unit(spectra):
-    ''' Normalize absorbance units to fall between 0 and 1 '''
-    f = (np.max(spectra) - np.min(spectra))    #Min-max-range
-    
-    return spectra / f
-
-
-
-
-
-
-
-
-
-
+# see return_functions!
 
 
 
@@ -401,31 +398,3 @@ def clip(wavelength, spectra, threshold, substitute=None):
     return wavelength, spectra
 
 
-#%% BASELINE
-
-def baseline(spectra):
-    """ Removes baseline (mean) from each spectrum.
-
-    Args:
-        spectra <numpy.ndarray>: NIRS data matrix.
-
-    Returns:
-        spectra <numpy.ndarray>: Mean-centered NIRS data matrix
-    """
-    
-    return spectra - np.mean(spectra, axis=1)[:, None]
-
-
-def detrend(spectra, bp=0):
-    """ Perform spectral detrending to remove linear trend from data.
-
-    Args:
-        spectra <numpy.ndarray>: NIRS data matrix.
-        bp <list>: A sequence of break points. If given, an individual linear fit is performed for each part of data
-        between two break points. Break points are specified as indices into data.
-
-    Returns:
-        spectra <numpy.ndarray>: Detrended NIR spectra
-    """
-    
-    return scipy.signal.detrend(spectra, bp=bp, axis= 1)
